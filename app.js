@@ -1,10 +1,11 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
 
 let transcriber;
-let currentWords = [];
+let wordChunks = [];
+let fullText = "";
 
 // --------------------
-// Load Whisper Model
+// Load Whisper Model (Force Hindi)
 // --------------------
 async function loadModel() {
   transcriber = await pipeline(
@@ -14,16 +15,19 @@ async function loadModel() {
 
   alert("AI Model Loaded ✅");
 }
-
 loadModel();
 
 // --------------------
-// Handle Video Upload
+// Elements
 // --------------------
 const videoInput = document.getElementById("videoInput");
 const videoElement = document.getElementById("video");
 const subtitlesDiv = document.getElementById("subtitles");
+const processBtn = document.getElementById("processBtn");
 
+// --------------------
+// Handle Video Upload
+// --------------------
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
   if (!file) return;
@@ -35,7 +39,7 @@ videoInput.addEventListener("change", () => {
 // --------------------
 // Generate Subtitles
 // --------------------
-document.getElementById("processBtn").addEventListener("click", async () => {
+processBtn.addEventListener("click", async () => {
   const file = videoInput.files[0];
   if (!file) return alert("Upload video first");
 
@@ -44,7 +48,9 @@ document.getElementById("processBtn").addEventListener("click", async () => {
   const audioData = await extractAudio(file);
 
   const result = await transcriber(audioData, {
-    return_timestamps: "word"
+    return_timestamps: "word",
+    language: "hi",       // 🔥 Force Hindi
+    task: "transcribe"
   });
 
   console.log(result);
@@ -54,15 +60,16 @@ document.getElementById("processBtn").addEventListener("click", async () => {
     return;
   }
 
-  currentWords = result.chunks;
+  wordChunks = result.chunks;
+  fullText = result.text;
 
-  subtitlesDiv.innerHTML = "Ready ▶ Play video";
+  subtitlesDiv.innerHTML = "Ready ▶ Play Video";
 
-  startSubtitleSync(currentWords, videoElement);
+  startSubtitleEngine();
 });
 
 // --------------------
-// Extract Audio Properly
+// Extract Audio (16kHz Mono)
 // --------------------
 async function extractAudio(file) {
   const arrayBuffer = await file.arrayBuffer();
@@ -74,40 +81,41 @@ async function extractAudio(file) {
 }
 
 // --------------------
-// Subtitle Sync System
+// Advanced Subtitle Engine
 // --------------------
-function startSubtitleSync(words, video) {
-  video.addEventListener("timeupdate", () => {
-    const currentTime = video.currentTime;
+function startSubtitleEngine() {
 
-    const activeWord = words.find(word =>
-      currentTime >= word.timestamp[0] &&
-      currentTime <= word.timestamp[1]
-    );
+  videoElement.addEventListener("timeupdate", () => {
+    const currentTime = videoElement.currentTime;
 
-    if (activeWord) {
-      subtitlesDiv.innerHTML =
-        `<span style="
-          color:${randomColor()};
-          font-family:${randomFont()};
-          font-size:22px;
-          font-weight:bold;
-        ">
-          ${activeWord.text}
-        </span>`;
-    }
+    let sentenceHTML = "";
+
+    wordChunks.forEach(word => {
+      const start = word.timestamp[0];
+      const end = word.timestamp[1];
+
+      if (currentTime >= start && currentTime <= end) {
+        // 🔥 Active word highlighted
+        sentenceHTML += `
+          <span style="
+            color: yellow;
+            font-weight: bold;
+            font-size: 28px;
+          ">
+            ${word.text}
+          </span> `;
+      } else {
+        sentenceHTML += `
+          <span style="
+            color: white;
+            opacity: 0.6;
+            font-size: 22px;
+          ">
+            ${word.text}
+          </span> `;
+      }
+    });
+
+    subtitlesDiv.innerHTML = sentenceHTML;
   });
-}
-
-// --------------------
-// Random Styling
-// --------------------
-function randomColor() {
-  const colors = ["red", "yellow", "cyan", "lime", "orange", "pink"];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function randomFont() {
-  const fonts = ["Arial", "Courier New", "Georgia", "Verdana"];
-  return fonts[Math.floor(Math.random() * fonts.length)];
 }
