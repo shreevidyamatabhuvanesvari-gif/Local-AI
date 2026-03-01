@@ -49,9 +49,12 @@ processBtn.addEventListener("click", async () => {
 
   const result = await transcriber(audioData, {
   return_timestamps: "word",
-  language: "hi",
   task: "transcribe",
-  forced_decoder_ids: undefined
+  language: "hi",
+  forced_decoder_ids: transcriber.processor.get_decoder_prompt_ids({
+    language: "hi",
+    task: "transcribe"
+  })
 });
 
   console.log(result);
