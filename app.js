@@ -10,7 +10,7 @@ let fullText = "";
 async function loadModel() {
   transcriber = await pipeline(
     "automatic-speech-recognition",
-    "Xenova/whisper-tiny"
+    "Xenova/whisper-base"
   );
 
   alert("AI Model Loaded ✅");
@@ -48,10 +48,11 @@ processBtn.addEventListener("click", async () => {
   const audioData = await extractAudio(file);
 
   const result = await transcriber(audioData, {
-    return_timestamps: "word",
-    language: "hi",       // 🔥 Force Hindi
-    task: "transcribe"
-  });
+  return_timestamps: "word",
+  language: "hi",
+  task: "transcribe",
+  suppress_tokens: []
+});
 
   console.log(result);
 
