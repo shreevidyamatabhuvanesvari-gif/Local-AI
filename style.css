@@ -1,0 +1,24 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  background: #111;
+  color: white;
+}
+
+.video-container {
+  position: relative;
+  display: inline-block;
+}
+
+video {
+  width: 90%;
+  max-width: 400px;
+}
+
+#subtitles {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  font-size: 20px;
+  font-weight: bold;
+}
