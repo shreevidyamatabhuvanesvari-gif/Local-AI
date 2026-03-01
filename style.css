@@ -17,8 +17,12 @@ video {
 
 #subtitles {
   position: absolute;
-  bottom: 20px;
+  bottom: 10%;
   width: 100%;
-  font-size: 20px;
+  padding: 10px;
+  text-align: center;
+  font-size: 24px;
   font-weight: bold;
+  text-shadow: 2px 2px 6px black;
+  pointer-events: none;
 }
