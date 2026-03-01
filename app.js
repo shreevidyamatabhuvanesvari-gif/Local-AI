@@ -51,7 +51,7 @@ processBtn.addEventListener("click", async () => {
   return_timestamps: "word",
   language: "hi",
   task: "transcribe",
-  suppress_tokens: []
+  forced_decoder_ids: undefined
 });
 
   console.log(result);
