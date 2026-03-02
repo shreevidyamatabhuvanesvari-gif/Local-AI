@@ -2,10 +2,9 @@ import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17
 
 let transcriber;
 let wordChunks = [];
-let fullText = "";
 
 // --------------------
-// Load Whisper Model (Force Hindi)
+// Load Model (whisper-base recommended)
 // --------------------
 async function loadModel() {
   transcriber = await pipeline(
@@ -13,7 +12,7 @@ async function loadModel() {
     "Xenova/whisper-base"
   );
 
-  alert("AI Model Loaded ✅");
+  alert("Model Loaded ✅");
 }
 loadModel();
 
@@ -26,7 +25,7 @@ const subtitlesDiv = document.getElementById("subtitles");
 const processBtn = document.getElementById("processBtn");
 
 // --------------------
-// Handle Video Upload
+// Video Upload
 // --------------------
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
@@ -37,7 +36,7 @@ videoInput.addEventListener("change", () => {
 });
 
 // --------------------
-// Generate Subtitles
+// Generate Subtitles (STRICT HINDI)
 // --------------------
 processBtn.addEventListener("click", async () => {
   const file = videoInput.files[0];
@@ -48,14 +47,12 @@ processBtn.addEventListener("click", async () => {
   const audioData = await extractAudio(file);
 
   const result = await transcriber(audioData, {
-  return_timestamps: "word",
-  task: "transcribe",
-  language: "hi",
-  forced_decoder_ids: transcriber.processor.get_decoder_prompt_ids({
-    language: "hi",
-    task: "transcribe"
-  })
-});
+    return_timestamps: "word",
+    generate_kwargs: {
+      language: "hi",
+      task: "transcribe"
+    }
+  });
 
   console.log(result);
 
@@ -65,7 +62,6 @@ processBtn.addEventListener("click", async () => {
   }
 
   wordChunks = result.chunks;
-  fullText = result.text;
 
   subtitlesDiv.innerHTML = "Ready ▶ Play Video";
 
@@ -73,22 +69,19 @@ processBtn.addEventListener("click", async () => {
 });
 
 // --------------------
-// Extract Audio (16kHz Mono)
+// Extract Audio
 // --------------------
 async function extractAudio(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new AudioContext({ sampleRate: 16000 });
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-
-  const channelData = decoded.getChannelData(0);
-  return channelData;
+  return decoded.getChannelData(0);
 }
 
 // --------------------
-// Advanced Subtitle Engine
+// Subtitle Engine
 // --------------------
 function startSubtitleEngine() {
-
   videoElement.addEventListener("timeupdate", () => {
     const currentTime = videoElement.currentTime;
 
@@ -99,12 +92,11 @@ function startSubtitleEngine() {
       const end = word.timestamp[1];
 
       if (currentTime >= start && currentTime <= end) {
-        // 🔥 Active word highlighted
         sentenceHTML += `
           <span style="
             color: yellow;
-            font-weight: bold;
             font-size: 28px;
+            font-weight: bold;
           ">
             ${word.text}
           </span> `;
