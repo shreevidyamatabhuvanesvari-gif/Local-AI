@@ -1,28 +1,28 @@
 body {
-  font-family: sans-serif;
-  text-align: center;
-  background: #111;
+  background: black;
   color: white;
+  text-align: center;
+  font-family: sans-serif;
 }
 
 .video-container {
   position: relative;
-  display: inline-block;
+  width: 95%;
+  margin: auto;
 }
 
 video {
-  width: 90%;
-  max-width: 400px;
+  width: 100%;
 }
 
 #subtitles {
   position: absolute;
-  bottom: 10%;
+  bottom: 15%;
   width: 100%;
-  padding: 10px;
   text-align: center;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
-  text-shadow: 2px 2px 6px black;
+  text-shadow: 2px 2px 8px black;
   pointer-events: none;
+  padding: 10px;
 }
