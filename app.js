@@ -3,41 +3,36 @@ import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17
 let transcriber;
 let wordChunks = [];
 
-// --------------------
-// Load Model (whisper-base recommended)
-// --------------------
-async function loadModel() {
-  transcriber = await pipeline(
-    "automatic-speech-recognition",
-    "Xenova/whisper-base"
-  );
-
-  alert("Model Loaded ✅");
-}
-loadModel();
-
-// --------------------
-// Elements
-// --------------------
 const videoInput = document.getElementById("videoInput");
 const videoElement = document.getElementById("video");
 const subtitlesDiv = document.getElementById("subtitles");
 const processBtn = document.getElementById("processBtn");
 
-// --------------------
+// ------------------
+// Load Model (Better Hindi)
+// ------------------
+async function loadModel() {
+  transcriber = await pipeline(
+    "automatic-speech-recognition",
+    "Xenova/whisper-base"
+  );
+  alert("Model Loaded ✅");
+}
+loadModel();
+
+// ------------------
 // Video Upload
-// --------------------
+// ------------------
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
   if (!file) return;
 
-  const url = URL.createObjectURL(file);
-  videoElement.src = url;
+  videoElement.src = URL.createObjectURL(file);
 });
 
-// --------------------
-// Generate Subtitles (STRICT HINDI)
-// --------------------
+// ------------------
+// Generate Subtitles
+// ------------------
 processBtn.addEventListener("click", async () => {
   const file = videoInput.files[0];
   if (!file) return alert("Upload video first");
@@ -54,23 +49,24 @@ processBtn.addEventListener("click", async () => {
     }
   });
 
-  console.log(result);
-
   if (!result.chunks) {
     subtitlesDiv.innerHTML = "No speech detected.";
     return;
   }
 
-  wordChunks = result.chunks;
+  wordChunks = result.chunks.map(word => ({
+    text: convertUrduToHindi(word.text),
+    timestamp: word.timestamp
+  }));
 
-  subtitlesDiv.innerHTML = "Ready ▶ Play Video";
+  subtitlesDiv.innerHTML = "Play Video ▶";
 
   startSubtitleEngine();
 });
 
-// --------------------
+// ------------------
 // Extract Audio
-// --------------------
+// ------------------
 async function extractAudio(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -78,40 +74,47 @@ async function extractAudio(file) {
   return decoded.getChannelData(0);
 }
 
-// --------------------
+// ------------------
 // Subtitle Engine
-// --------------------
+// ------------------
 function startSubtitleEngine() {
-  videoElement.addEventListener("timeupdate", () => {
+
+  videoElement.ontimeupdate = () => {
     const currentTime = videoElement.currentTime;
 
-    let sentenceHTML = "";
+    let html = "";
 
     wordChunks.forEach(word => {
-      const start = word.timestamp[0];
-      const end = word.timestamp[1];
+      if (currentTime >= word.timestamp[0] &&
+          currentTime <= word.timestamp[1]) {
 
-      if (currentTime >= start && currentTime <= end) {
-        sentenceHTML += `
-          <span style="
-            color: yellow;
-            font-size: 28px;
-            font-weight: bold;
-          ">
-            ${word.text}
-          </span> `;
+        html += `<span style="color:yellow;font-size:32px;">
+                  ${word.text}
+                </span> `;
       } else {
-        sentenceHTML += `
-          <span style="
-            color: white;
-            opacity: 0.6;
-            font-size: 22px;
-          ">
-            ${word.text}
-          </span> `;
+        html += `<span style="opacity:0.6;">
+                  ${word.text}
+                </span> `;
       }
     });
 
-    subtitlesDiv.innerHTML = sentenceHTML;
-  });
+    subtitlesDiv.innerHTML = html;
+  };
+}
+
+// ------------------
+// Urdu → Hindi Script Convert
+// ------------------
+function convertUrduToHindi(text) {
+  const map = {
+    "ا":"अ","ب":"ब","پ":"प","ت":"त","ٹ":"ट",
+    "ث":"स","ج":"ज","چ":"च","ح":"ह","خ":"ख",
+    "د":"द","ڈ":"ड","ر":"र","ز":"ज","س":"स",
+    "ش":"श","ص":"स","ض":"द","ط":"त","ظ":"ज",
+    "ع":"अ","غ":"ग","ف":"फ","ق":"क","ک":"क",
+    "گ":"ग","ل":"ल","م":"म","ن":"न","و":"व",
+    "ہ":"ह","ی":"ि"
+  };
+
+  return text.split("").map(c => map[c] || c).join("");
 }
