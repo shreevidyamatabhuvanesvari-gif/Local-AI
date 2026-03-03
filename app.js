@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   subtitlesDiv.textContent = "Loading AI model...";
 
+  // =========================
+  // 🔹 LOAD MODEL
+  // =========================
   try {
 
     transcriber = await pipeline(
@@ -22,20 +25,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     subtitlesDiv.textContent = "Model Loaded ✔";
 
   } catch (err) {
+
     subtitlesDiv.textContent = "Model Load Failed ❌";
-    console.error(err);
+    console.error("MODEL ERROR:", err);
+
   }
 
-  // Video Preview
+  // =========================
+  // 🔹 VIDEO PREVIEW
+  // =========================
   videoInput.addEventListener("change", () => {
-    const file = videoInput.files[0];
+
+    const file = videoInput.files?.[0];
     if (!file) return;
 
     videoElement.src = URL.createObjectURL(file);
     videoElement.load();
   });
 
-  // Process Button
+  // =========================
+  // 🔹 PROCESS VIDEO
+  // =========================
   processBtn.addEventListener("click", async () => {
 
     if (!transcriber) {
@@ -43,9 +53,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const file = videoInput.files[0];
+    const file = videoInput.files?.[0];
+
     if (!file) {
       alert("Upload video first");
+      return;
+    }
+
+    // Limit file size for browser safety (50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert("Video too large. Use short clip (under 50MB).");
       return;
     }
 
@@ -53,25 +70,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       subtitlesDiv.textContent = "Extracting audio...";
 
-      const audio = await extractAudio(file);
+      const audio = await extractAudioSafe(file);
 
       subtitlesDiv.textContent = "Transcribing...";
 
       const result = await transcriber(audio, {
         generate_kwargs: {
           task: "transcribe",
-          temperature: 0.0,
-          // language intentionally not forced
+          temperature: 0.0
         }
       });
 
-      let cleanText = cleanRepetition(result.text || "");
+      if (!result || !result.text) {
+        subtitlesDiv.textContent = "No speech detected.";
+        return;
+      }
+
+      const cleanText = cleanRepetition(result.text);
 
       subtitlesDiv.textContent = cleanText;
 
     } catch (err) {
+
       subtitlesDiv.textContent = "Transcription failed ❌";
-      console.error(err);
+      console.error("PROCESS ERROR:", err);
+
     }
 
   });
@@ -79,47 +102,42 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 
-// Audio Extract
-async function extractAudio(file) {
+// =========================
+// 🔹 SAFE AUDIO EXTRACT
+// =========================
+async function extractAudioSafe(file) {
 
   const arrayBuffer = await file.arrayBuffer();
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
   const audioCtx = new AudioContextClass();
+
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
-  const targetSampleRate = 16000;
+  // Direct mono extraction (no OfflineAudioContext)
+  const channelData = decoded.getChannelData(0);
 
-  const offlineCtx = new OfflineAudioContext(
-    1,
-    decoded.duration * targetSampleRate,
-    targetSampleRate
-  );
-
-  const source = offlineCtx.createBufferSource();
-  source.buffer = decoded;
-  source.connect(offlineCtx.destination);
-  source.start(0);
-
-  const rendered = await offlineCtx.startRendering();
-
-  return rendered.getChannelData(0);
+  return channelData;
 }
 
 
-// Repetition Cleaner
+// =========================
+// 🔹 REPEAT FILTER (Improved)
+// =========================
 function cleanRepetition(text) {
 
-  const words = text.split(" ");
+  const words = text.split(/\s+/);
   const filtered = [];
 
-  let lastWord = "";
+  for (let i = 0; i < words.length; i++) {
 
-  for (let word of words) {
-    if (word !== lastWord) {
-      filtered.push(word);
+    if (i === 0 || words[i] !== words[i - 1]) {
+      filtered.push(words[i]);
     }
-    lastWord = word;
+
   }
 
-  return filtered.join(" ");
+  return filtered.join(" ").trim();
 }
