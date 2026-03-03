@@ -1,25 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <title>Hindi AI Video Subtitles</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hindi Subtitle Engine</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<h2>Offline Hindi AI Subtitles</h2>
+  <h2>Hindi Subtitle Generator</h2>
 
-<input type="file" id="videoInput" accept="video/*">
-<br><br>
+  <input type="file" id="videoInput" accept="video/*" />
+  <br><br>
 
-<div class="video-container">
   <video id="video" controls></video>
-  <div id="subtitles"></div>
-</div>
 
-<button id="processBtn">Generate Subtitles</button>
+  <div id="subtitleContainer">
+    <div id="subtitles"></div>
+  </div>
 
-<script type="module" src="app.js"></script>
+  <br>
+  <button id="processBtn">Generate Subtitles</button>
 
+  <script type="module" src="app.js"></script>
 </body>
 </html>
