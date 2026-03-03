@@ -1,114 +1,152 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
 import { correctHindiText } from "./hindiSpellCorrector.js";
 
-let transcriber;
+let transcriber = null;
 let wordChunks = [];
 let subtitleEngineStarted = false;
 
-const videoInput = document.getElementById("videoInput");
-const videoElement = document.getElementById("video");
-const subtitlesDiv = document.getElementById("subtitles");
-const processBtn = document.getElementById("processBtn");
+document.addEventListener("DOMContentLoaded", () => {
 
-// -------------------------
-// 1️⃣ Load Model
-// -------------------------
-async function loadModel() {
-  try {
-    subtitlesDiv.innerHTML = "Model Loading... ⏳";
+  const videoInput = document.getElementById("videoInput");
+  const videoElement = document.getElementById("video");
+  const subtitlesDiv = document.getElementById("subtitles");
+  const processBtn = document.getElementById("processBtn");
 
-    transcriber = await pipeline(
-      "automatic-speech-recognition",
-      "Xenova/whisper-small",
-      { quantized: true }
-    );
-
-    subtitlesDiv.innerHTML = "Model Loaded ✅";
-  } catch (err) {
-    subtitlesDiv.innerHTML = "Model Load Failed ❌";
-    console.error(err);
+  // 🛑 DOM Safety Check
+  if (!videoInput || !videoElement || !subtitlesDiv || !processBtn) {
+    console.error("DOM Elements Missing");
+    return;
   }
-}
 
-loadModel();
+  // -------------------------
+  // 1️⃣ Load Model
+  // -------------------------
+  async function loadModel() {
+    try {
+      subtitlesDiv.textContent = "Model Loading... ⏳";
 
-// -------------------------
-// 2️⃣ Video Preview
-// -------------------------
-videoInput.addEventListener("change", () => {
-  const file = videoInput.files[0];
-  if (!file) return;
+      transcriber = await pipeline(
+        "automatic-speech-recognition",
+        "Xenova/whisper-small",
+        { quantized: true }
+      );
 
-  videoElement.src = URL.createObjectURL(file);
-});
+      subtitlesDiv.textContent = "Model Loaded ✅";
+    } catch (err) {
+      subtitlesDiv.textContent = "Model Load Failed ❌";
+      console.error("MODEL ERROR:", err);
+    }
+  }
 
-// -------------------------
-// 3️⃣ Generate Subtitles
-// -------------------------
-processBtn.addEventListener("click", async () => {
-  try {
-    const file = videoInput.files[0];
-    if (!file) return alert("Upload video first");
+  loadModel();
 
-    subtitlesDiv.innerHTML = "Extracting Audio... ⏳";
+  // -------------------------
+  // 2️⃣ Video Preview
+  // -------------------------
+  videoInput.addEventListener("change", () => {
+    const file = videoInput.files?.[0];
+    if (!file) return;
 
-    const audioData = await extractAudioProper(file);
+    videoElement.src = URL.createObjectURL(file);
+  });
 
-    subtitlesDiv.innerHTML = "Transcribing... ⏳";
+  // -------------------------
+  // 3️⃣ Generate Subtitles
+  // -------------------------
+  processBtn.addEventListener("click", async () => {
 
-    const result = await transcriber(audioData, {
-      return_timestamps: "word",
-      generate_kwargs: {
-        language: "hi",
-        task: "transcribe"
+    if (!transcriber) {
+      alert("Model not loaded yet");
+      return;
+    }
+
+    const file = videoInput.files?.[0];
+    if (!file) {
+      alert("Upload video first");
+      return;
+    }
+
+    try {
+      subtitlesDiv.textContent = "Extracting Audio... ⏳";
+
+      const audioData = await extractAudioProper(file);
+
+      subtitlesDiv.textContent = "Transcribing... ⏳";
+
+      const result = await transcriber(audioData, {
+        return_timestamps: "word",
+        generate_kwargs: {
+          language: "hi",
+          task: "transcribe"
+        }
+      });
+
+      console.log("RESULT:", result);
+
+      if (!result) {
+        subtitlesDiv.textContent = "No result ❌";
+        return;
       }
-    });
 
-    console.log("RESULT:", result);
+      if (!result.chunks && result.text) {
+        subtitlesDiv.textContent =
+          correctHindiText(result.text);
+        return;
+      }
 
-    if (!result || (!result.chunks && !result.text)) {
-      subtitlesDiv.innerHTML = "Speech not detected ❌";
-      return;
+      if (!result.chunks) {
+        subtitlesDiv.textContent = "Speech not detected ❌";
+        return;
+      }
+
+      wordChunks = result.chunks
+        .filter(w => w.timestamp && w.timestamp.length === 2)
+        .map(word => ({
+          ...word,
+          text: correctHindiText(word.text?.trim() || "")
+        }));
+
+      subtitlesDiv.textContent = "Ready ▶ Play Video";
+
+      if (!subtitleEngineStarted) {
+        startSubtitleEngine(videoElement, subtitlesDiv);
+        subtitleEngineStarted = true;
+      }
+
+    } catch (err) {
+      subtitlesDiv.textContent = "Processing Failed ❌";
+      console.error("PROCESS ERROR:", err);
     }
 
-    // अगर chunks नहीं मिले तो fallback
-    if (!result.chunks) {
-      const corrected = correctHindiText(result.text);
-      subtitlesDiv.innerHTML = corrected;
-      return;
-    }
+  });
 
-    // Spell correction apply
-    wordChunks = result.chunks.map(word => ({
-      ...word,
-      text: correctHindiText(word.text.trim())
-    }));
-
-    subtitlesDiv.innerHTML = "Ready ▶ Play Video";
-
-    if (!subtitleEngineStarted) {
-      startSubtitleEngine();
-      subtitleEngineStarted = true;
-    }
-
-  } catch (error) {
-    subtitlesDiv.innerHTML = "Processing Failed ❌";
-    console.error(error);
-  }
 });
 
 // -------------------------
-// 4️⃣ Proper Audio Resampling
+// 4️⃣ Proper Resampling (Safe)
 // -------------------------
 async function extractAudioProper(file) {
+
   const arrayBuffer = await file.arrayBuffer();
-  const audioCtx = new AudioContext();
+
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  const audioCtx = new AudioContextClass();
+
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+
+  const targetSampleRate = 16000;
+
+  const length = Math.max(
+    1,
+    Math.floor(decoded.duration * targetSampleRate)
+  );
 
   const offlineCtx = new OfflineAudioContext(
     1,
-    Math.ceil(decoded.duration * 16000),
-    16000
+    length,
+    targetSampleRate
   );
 
   const source = offlineCtx.createBufferSource();
@@ -122,22 +160,31 @@ async function extractAudioProper(file) {
 }
 
 // -------------------------
-// 5️⃣ Subtitle Sync Engine
+// 5️⃣ Subtitle Sync Engine (Safe)
 // -------------------------
-function startSubtitleEngine() {
+function startSubtitleEngine(videoElement, subtitlesDiv) {
+
   videoElement.addEventListener("timeupdate", () => {
+
+    if (!wordChunks.length) return;
+
     const currentTime = videoElement.currentTime;
+    let activeText = "";
 
-    let text = "";
+    for (let word of wordChunks) {
 
-    wordChunks.forEach(word => {
-      const [start, end] = word.timestamp;
+      if (!word.timestamp) continue;
+
+      const start = word.timestamp[0];
+      const end = word.timestamp[1];
 
       if (currentTime >= start && currentTime <= end) {
-        text += `<span style="color:yellow;font-size:28px;">${word.text}</span> `;
+        activeText += word.text + " ";
       }
-    });
-
-    subtitlesDiv.innerHTML = text;
-  });
     }
+
+    subtitlesDiv.textContent = activeText.trim();
+
+  });
+
+}
