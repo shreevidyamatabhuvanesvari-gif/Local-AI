@@ -9,11 +9,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const processBtn = document.getElementById("processBtn");
   const videoElement = document.getElementById("video");
 
+  // =========================
+  // 🔹 LOAD MODEL
+  // =========================
+
   subtitlesDiv.textContent = "Loading AI model... ⏳";
 
   try {
 
-    // 🔹 Load smaller stable model
     transcriber = await pipeline(
       "automatic-speech-recognition",
       "Xenova/whisper-tiny",
@@ -29,21 +32,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   }
 
-  // Video preview
+  // =========================
+  // 🔹 VIDEO PREVIEW
+  // =========================
+
   videoInput.addEventListener("change", () => {
 
     const file = videoInput.files[0];
     if (!file) return;
 
-    videoElement.src = URL.createObjectURL(file);
+    const videoURL = URL.createObjectURL(file);
+
+    videoElement.src = videoURL;
+    videoElement.load();
+    videoElement.style.display = "block";
 
   });
 
-  // Process button
+  // =========================
+  // 🔹 PROCESS VIDEO
+  // =========================
+
   processBtn.addEventListener("click", async () => {
 
     if (!transcriber) {
-      alert("Model not ready");
+      alert("Model not ready yet");
       return;
     }
 
@@ -54,13 +67,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    subtitlesDiv.textContent = "Extracting audio...";
-
-    const audio = await extractAudio(file);
-
-    subtitlesDiv.textContent = "Transcribing...";
-
     try {
+
+      subtitlesDiv.textContent = "Extracting audio...";
+
+      const audio = await extractAudio(file);
+
+      subtitlesDiv.textContent = "Transcribing... ⏳";
 
       const result = await transcriber(audio, {
         generate_kwargs: {
@@ -69,7 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
 
-      subtitlesDiv.textContent = result.text;
+      subtitlesDiv.textContent = result.text || "No speech detected";
 
     } catch (err) {
 
@@ -82,27 +95,35 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
+// =========================
+// 🔹 AUDIO EXTRACT FUNCTION
+// =========================
 
-// Extract audio
 async function extractAudio(file) {
 
   const arrayBuffer = await file.arrayBuffer();
 
-  const audioCtx = new AudioContext();
+  const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  const audioCtx = new AudioContextClass();
+
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
-  const offline = new OfflineAudioContext(
+  const targetSampleRate = 16000;
+
+  const offlineCtx = new OfflineAudioContext(
     1,
-    decoded.duration * 16000,
-    16000
+    decoded.duration * targetSampleRate,
+    targetSampleRate
   );
 
-  const source = offline.createBufferSource();
+  const source = offlineCtx.createBufferSource();
   source.buffer = decoded;
-  source.connect(offline.destination);
+  source.connect(offlineCtx.destination);
   source.start(0);
 
-  const rendered = await offline.startRendering();
+  const rendered = await offlineCtx.startRendering();
 
   return rendered.getChannelData(0);
 
