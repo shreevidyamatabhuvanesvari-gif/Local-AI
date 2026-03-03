@@ -2,26 +2,95 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hindi Subtitle Engine</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hindi Subtitle Generator</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    input[type="file"] {
+      margin: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      background: #ff9800;
+      color: #000;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: #ffc107;
+    }
+
+    .video-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+      max-width: 100%;
+    }
+
+    video {
+      width: 100%;
+      max-width: 800px;
+      border-radius: 8px;
+    }
+
+    #subtitles {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      font-size: 26px;
+      font-weight: bold;
+      text-align: center;
+      color: yellow;
+      text-shadow: 2px 2px 6px black;
+      pointer-events: none;
+    }
+
+    .status {
+      margin-top: 15px;
+      font-size: 18px;
+      color: #00e676;
+    }
+  </style>
 </head>
+
 <body>
 
-  <h2>Hindi Subtitle Generator</h2>
+  <h1>🎙 Hindi Subtitle Generator</h1>
 
   <input type="file" id="videoInput" accept="video/*" />
-  <br><br>
-
-  <video id="video" controls></video>
-
-  <div id="subtitleContainer">
-    <div id="subtitles"></div>
-  </div>
-
   <br>
   <button id="processBtn">Generate Subtitles</button>
 
-  <script type="module" src="app.js"></script>
+  <div class="video-container">
+    <video id="video" controls></video>
+    <div id="subtitles"></div>
+  </div>
+
+  <div class="status">
+    Model will load automatically...
+  </div>
+
+  <!-- ✅ ONLY ONE SCRIPT -->
+  <script type="module" src="./app.js"></script>
+
 </body>
 </html>
