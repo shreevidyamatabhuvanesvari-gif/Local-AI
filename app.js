@@ -2,6 +2,7 @@ import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17
 
 let transcriber;
 let wordChunks = [];
+let subtitleEngineStarted = false;
 
 const videoInput = document.getElementById("videoInput");
 const videoElement = document.getElementById("video");
@@ -12,8 +13,8 @@ const processBtn = document.getElementById("processBtn");
 // 1️⃣ Load Whisper-small
 // -------------------------
 async function loadModel() {
-  subtitlesDiv.innerHTML = "Model Loading... ⏳ (First time slow होगा)";
-  
+  subtitlesDiv.innerHTML = "Model Loading... ⏳ (पहली बार समय लगेगा)";
+
   transcriber = await pipeline(
     "automatic-speech-recognition",
     "Xenova/whisper-small"
@@ -59,10 +60,14 @@ processBtn.addEventListener("click", async () => {
     return;
   }
 
-  wordChunks = normalizeHindi(result.chunks);
+  wordChunks = normalizeAndCorrect(result.chunks);
 
   subtitlesDiv.innerHTML = "Ready ▶ Play Video";
-  startSubtitleEngine();
+
+  if (!subtitleEngineStarted) {
+    startSubtitleEngine();
+    subtitleEngineStarted = true;
+  }
 });
 
 // -------------------------
@@ -76,9 +81,10 @@ async function extractAudio(file) {
 }
 
 // -------------------------
-// 5️⃣ Urdu → Hindi Normalize
+// 5️⃣ Urdu Normalize + Hindi Spell Correction
 // -------------------------
-function normalizeHindi(chunks) {
+function normalizeAndCorrect(chunks) {
+
   const urduToHindiMap = {
     "ہے": "है",
     "میں": "में",
@@ -90,13 +96,33 @@ function normalizeHindi(chunks) {
     "وہ": "वह"
   };
 
+  const spellingCorrections = {
+    "तकदिर": "तकदीर",
+    "तकदिरें": "तकदीरें",
+    "क्युकी": "क्योंकि",
+    "मे": "में",
+    "वकत": "वक्त",
+    "हैे": "है",
+    "सचि": "सच्ची",
+    "तसवीरें": "तस्वीरें",
+    "है": "है",
+    "हैं": "हैं"
+  };
+
   return chunks.map(word => {
     let text = word.text.trim();
 
+    // Urdu → Hindi conversion
     Object.keys(urduToHindiMap).forEach(urdu => {
       if (text.includes(urdu)) {
         text = text.replaceAll(urdu, urduToHindiMap[urdu]);
       }
+    });
+
+    // Basic spell correction
+    Object.keys(spellingCorrections).forEach(wrong => {
+      const regex = new RegExp(`\\b${wrong}\\b`, "g");
+      text = text.replace(regex, spellingCorrections[wrong]);
     });
 
     return {
@@ -119,12 +145,12 @@ function startSubtitleEngine() {
       const [start, end] = word.timestamp;
 
       if (currentTime >= start && currentTime <= end) {
-        activeText += `<span style="color:yellow;">${word.text}</span> `;
+        activeText += `<span style="color:yellow; font-size:28px;">${word.text}</span> `;
       } else {
-        activeText += `<span style="opacity:0.6;">${word.text}</span> `;
+        activeText += `<span style="opacity:0.5;">${word.text}</span> `;
       }
     });
 
     subtitlesDiv.innerHTML = activeText;
   });
-    }
+}
