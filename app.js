@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   } catch (err) {
     sub.textContent = "Transformers FAILED ❌";
-    console.error(err);
+    console.error("IMPORT ERROR:", err);
   }
 
 });
