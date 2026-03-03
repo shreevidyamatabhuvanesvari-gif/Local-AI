@@ -8,14 +8,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const videoInput = document.getElementById("videoInput");
   const processBtn = document.getElementById("processBtn");
   const videoElement = document.getElementById("video");
+  const editor = document.getElementById("editor");
+  const copyBtn = document.getElementById("copyBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
 
   subtitlesDiv.textContent = "Loading AI model...";
 
-  // =========================
-  // 🔹 LOAD MODEL
-  // =========================
   try {
-
     transcriber = await pipeline(
       "automatic-speech-recognition",
       "Xenova/whisper-small",
@@ -23,29 +22,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     subtitlesDiv.textContent = "Model Loaded ✔";
-
   } catch (err) {
-
     subtitlesDiv.textContent = "Model Load Failed ❌";
-    console.error("MODEL ERROR:", err);
-
+    console.error(err);
   }
 
-  // =========================
-  // 🔹 VIDEO PREVIEW
-  // =========================
+  // Video Preview
   videoInput.addEventListener("change", () => {
-
-    const file = videoInput.files?.[0];
+    const file = videoInput.files[0];
     if (!file) return;
 
     videoElement.src = URL.createObjectURL(file);
     videoElement.load();
   });
 
-  // =========================
-  // 🔹 PROCESS VIDEO
-  // =========================
+  // Generate
   processBtn.addEventListener("click", async () => {
 
     if (!transcriber) {
@@ -53,90 +44,71 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const file = videoInput.files?.[0];
-
+    const file = videoInput.files[0];
     if (!file) {
       alert("Upload video first");
       return;
     }
 
-    // Limit file size for browser safety (50MB)
-    if (file.size > 50 * 1024 * 1024) {
-      alert("Video too large. Use short clip (under 50MB).");
-      return;
-    }
-
     try {
-
       subtitlesDiv.textContent = "Extracting audio...";
-
-      const audio = await extractAudioSafe(file);
+      const audio = await extractAudio(file);
 
       subtitlesDiv.textContent = "Transcribing...";
-
       const result = await transcriber(audio, {
         generate_kwargs: {
-          task: "transcribe",
           temperature: 0.0
         }
       });
 
-      if (!result || !result.text) {
-        subtitlesDiv.textContent = "No speech detected.";
-        return;
-      }
+      let cleanText = cleanRepetition(result.text || "");
 
-      const cleanText = cleanRepetition(result.text);
-
-      subtitlesDiv.textContent = cleanText;
+      subtitlesDiv.textContent = "Done ✔";
+      editor.value = cleanText;
 
     } catch (err) {
-
       subtitlesDiv.textContent = "Transcription failed ❌";
-      console.error("PROCESS ERROR:", err);
-
+      console.error(err);
     }
+  });
 
+  // Copy
+  copyBtn.addEventListener("click", () => {
+    editor.select();
+    document.execCommand("copy");
+    alert("Copied!");
+  });
+
+  // Download
+  downloadBtn.addEventListener("click", () => {
+    const blob = new Blob([editor.value], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "transcription.txt";
+    link.click();
   });
 
 });
 
-// =========================
-// 🔹 SAFE + RESAMPLED AUDIO
-// =========================
-async function extractAudioSafe(file) {
+// Audio Extract
+async function extractAudio(file) {
 
   const arrayBuffer = await file.arrayBuffer();
-
-  const AudioContextClass =
-    window.AudioContext || window.webkitAudioContext;
-
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const audioCtx = new AudioContextClass();
-
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
   const targetSampleRate = 16000;
 
-  const length = Math.floor(decoded.duration * targetSampleRate);
-
   const offlineCtx = new OfflineAudioContext(
     1,
-    length,
+    Math.ceil(decoded.duration * targetSampleRate),
     targetSampleRate
   );
 
   const source = offlineCtx.createBufferSource();
   source.buffer = decoded;
-
-  // Force mono
-  const splitter = offlineCtx.createChannelSplitter(2);
-  const merger = offlineCtx.createChannelMerger(1);
-
-  source.connect(splitter);
-  splitter.connect(merger, 0, 0);
-
-  merger.connect(offlineCtx.destination);
-
+  source.connect(offlineCtx.destination);
   source.start(0);
 
   const rendered = await offlineCtx.startRendering();
@@ -144,21 +116,18 @@ async function extractAudioSafe(file) {
   return rendered.getChannelData(0);
 }
 
-// =========================
-// 🔹 REPEAT FILTER (Improved)
-// =========================
+// Remove repeated words
 function cleanRepetition(text) {
-
-  const words = text.split(/\s+/);
+  const words = text.split(" ");
   const filtered = [];
+  let lastWord = "";
 
-  for (let i = 0; i < words.length; i++) {
-
-    if (i === 0 || words[i] !== words[i - 1]) {
-      filtered.push(words[i]);
+  for (let word of words) {
+    if (word !== lastWord) {
+      filtered.push(word);
     }
-
+    lastWord = word;
   }
 
-  return filtered.join(" ").trim();
+  return filtered.join(" ");
 }
