@@ -9,50 +9,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   const processBtn = document.getElementById("processBtn");
   const videoElement = document.getElementById("video");
 
-  // =========================
-  // 🔹 LOAD MODEL
-  // =========================
-
-  subtitlesDiv.textContent = "Loading AI model... ⏳";
+  subtitlesDiv.textContent = "Loading AI model...";
 
   try {
 
     transcriber = await pipeline(
-  "automatic-speech-recognition",
-  "Xenova/whisper-small",
-  { quantized: true }
-);
+      "automatic-speech-recognition",
+      "Xenova/whisper-small",
+      { quantized: true }
+    );
 
     subtitlesDiv.textContent = "Model Loaded ✔";
 
-  } catch (error) {
-
+  } catch (err) {
     subtitlesDiv.textContent = "Model Load Failed ❌";
-    console.error(error);
-
+    console.error(err);
   }
 
-  // =========================
-  // 🔹 VIDEO PREVIEW
-  // =========================
-
+  // Video Preview
   videoInput.addEventListener("change", () => {
-
     const file = videoInput.files[0];
     if (!file) return;
 
-    const videoURL = URL.createObjectURL(file);
-
-    videoElement.src = videoURL;
+    videoElement.src = URL.createObjectURL(file);
     videoElement.load();
-    videoElement.style.display = "block";
-
   });
 
-  // =========================
-  // 🔹 PROCESS VIDEO
-  // =========================
-
+  // Process Button
   processBtn.addEventListener("click", async () => {
 
     if (!transcriber) {
@@ -61,7 +44,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const file = videoInput.files[0];
-
     if (!file) {
       alert("Upload video first");
       return;
@@ -73,43 +55,36 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const audio = await extractAudio(file);
 
-      subtitlesDiv.textContent = "Transcribing... ⏳";
+      subtitlesDiv.textContent = "Transcribing...";
 
       const result = await transcriber(audio, {
-  return_timestamps: false,
-  generate_kwargs: {
-    language: "hi",
-    task: "transcribe",
-    temperature: 0.0
-  }
-});
+        generate_kwargs: {
+          task: "transcribe",
+          temperature: 0.0,
+          // language intentionally not forced
+        }
+      });
 
-      subtitlesDiv.textContent = result.text || "No speech detected";
+      let cleanText = cleanRepetition(result.text || "");
+
+      subtitlesDiv.textContent = cleanText;
 
     } catch (err) {
-
       subtitlesDiv.textContent = "Transcription failed ❌";
       console.error(err);
-
     }
 
   });
 
 });
 
-// =========================
-// 🔹 AUDIO EXTRACT FUNCTION
-// =========================
 
+// Audio Extract
 async function extractAudio(file) {
 
   const arrayBuffer = await file.arrayBuffer();
-
-  const AudioContextClass =
-    window.AudioContext || window.webkitAudioContext;
-
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const audioCtx = new AudioContextClass();
-
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
   const targetSampleRate = 16000;
@@ -128,5 +103,23 @@ async function extractAudio(file) {
   const rendered = await offlineCtx.startRendering();
 
   return rendered.getChannelData(0);
+}
 
+
+// Repetition Cleaner
+function cleanRepetition(text) {
+
+  const words = text.split(" ");
+  const filtered = [];
+
+  let lastWord = "";
+
+  for (let word of words) {
+    if (word !== lastWord) {
+      filtered.push(word);
+    }
+    lastWord = word;
+  }
+
+  return filtered.join(" ");
 }
