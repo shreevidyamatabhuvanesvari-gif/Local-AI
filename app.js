@@ -10,14 +10,15 @@ const subtitlesDiv = document.getElementById("subtitles");
 const processBtn = document.getElementById("processBtn");
 
 // -------------------------
-// 1️⃣ Load Whisper-small
+// 1️⃣ Load Model
 // -------------------------
 async function loadModel() {
-  subtitlesDiv.innerHTML = "Model Loading... ⏳ (पहली बार समय लगेगा)";
+  subtitlesDiv.innerHTML = "Model Loading... ⏳";
 
   transcriber = await pipeline(
     "automatic-speech-recognition",
-    "Xenova/whisper-small"
+    "Xenova/whisper-small",
+    { quantized: true }
   );
 
   subtitlesDiv.innerHTML = "Model Loaded ✅";
@@ -26,26 +27,27 @@ async function loadModel() {
 loadModel();
 
 // -------------------------
-// 2️⃣ Video Upload Preview
+// 2️⃣ Video Preview
 // -------------------------
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
   if (!file) return;
 
-  const url = URL.createObjectURL(file);
-  videoElement.src = url;
+  videoElement.src = URL.createObjectURL(file);
 });
 
 // -------------------------
-// 3️⃣ Generate Subtitles
+// 3️⃣ Process Audio
 // -------------------------
 processBtn.addEventListener("click", async () => {
   const file = videoInput.files[0];
   if (!file) return alert("Upload video first");
 
-  subtitlesDiv.innerHTML = "Processing Audio... ⏳";
+  subtitlesDiv.innerHTML = "Extracting Audio...";
 
-  const audioData = await extractAudio(file);
+  const audioData = await extractAudioProper(file);
+
+  subtitlesDiv.innerHTML = "Transcribing... ⏳";
 
   const result = await transcriber(audioData, {
     return_timestamps: "word",
@@ -56,12 +58,11 @@ processBtn.addEventListener("click", async () => {
   });
 
   if (!result.chunks) {
-    subtitlesDiv.innerHTML = "Speech not detected ❌";
+    subtitlesDiv.innerHTML = "No speech detected ❌";
     return;
   }
 
-  wordChunks = normalizeAndCorrect(result.chunks);
-
+  wordChunks = result.chunks;
   subtitlesDiv.innerHTML = "Ready ▶ Play Video";
 
   if (!subtitleEngineStarted) {
@@ -71,86 +72,47 @@ processBtn.addEventListener("click", async () => {
 });
 
 // -------------------------
-// 4️⃣ Extract Audio
+// 4️⃣ Proper Audio Resampling (CRITICAL FIX)
 // -------------------------
-async function extractAudio(file) {
+async function extractAudioProper(file) {
   const arrayBuffer = await file.arrayBuffer();
-  const audioCtx = new AudioContext({ sampleRate: 16000 });
+  const audioCtx = new AudioContext();
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-  return decoded.getChannelData(0);
+
+  const offlineCtx = new OfflineAudioContext(
+    1,
+    decoded.duration * 16000,
+    16000
+  );
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = decoded;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+
+  const rendered = await offlineCtx.startRendering();
+  return rendered.getChannelData(0);
 }
 
 // -------------------------
-// 5️⃣ Urdu Normalize + Hindi Spell Correction
-// -------------------------
-function normalizeAndCorrect(chunks) {
-
-  const urduToHindiMap = {
-    "ہے": "है",
-    "میں": "में",
-    "اور": "और",
-    "کی": "की",
-    "کا": "का",
-    "کو": "को",
-    "یہ": "यह",
-    "وہ": "वह"
-  };
-
-  const spellingCorrections = {
-    "तकदिर": "तकदीर",
-    "तकदिरें": "तकदीरें",
-    "क्युकी": "क्योंकि",
-    "मे": "में",
-    "वकत": "वक्त",
-    "हैे": "है",
-    "सचि": "सच्ची",
-    "तसवीरें": "तस्वीरें",
-    "है": "है",
-    "हैं": "हैं"
-  };
-
-  return chunks.map(word => {
-    let text = word.text.trim();
-
-    // Urdu → Hindi conversion
-    Object.keys(urduToHindiMap).forEach(urdu => {
-      if (text.includes(urdu)) {
-        text = text.replaceAll(urdu, urduToHindiMap[urdu]);
-      }
-    });
-
-    // Basic spell correction
-    Object.keys(spellingCorrections).forEach(wrong => {
-      const regex = new RegExp(`\\b${wrong}\\b`, "g");
-      text = text.replace(regex, spellingCorrections[wrong]);
-    });
-
-    return {
-      ...word,
-      text
-    };
-  });
-}
-
-// -------------------------
-// 6️⃣ Subtitle Sync Engine
+// 5️⃣ Subtitle Sync
 // -------------------------
 function startSubtitleEngine() {
   videoElement.addEventListener("timeupdate", () => {
     const currentTime = videoElement.currentTime;
 
-    let activeText = "";
+    let text = "";
 
     wordChunks.forEach(word => {
       const [start, end] = word.timestamp;
 
       if (currentTime >= start && currentTime <= end) {
-        activeText += `<span style="color:yellow; font-size:28px;">${word.text}</span> `;
+        text += `<span style="color:yellow;font-size:28px;">${word.text}</span> `;
       } else {
-        activeText += `<span style="opacity:0.5;">${word.text}</span> `;
+        text += `<span style="opacity:0.5;">${word.text}</span> `;
       }
     });
 
-    subtitlesDiv.innerHTML = activeText;
+    subtitlesDiv.innerHTML = text;
   });
 }
