@@ -2,71 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Subtitle Generator</title>
+  <title>AI Subtitle System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <style>
     body {
-      background-color: #111;
-      color: white;
       font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
-    }
-
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    input {
-      margin: 15px 0;
-    }
-
-    button {
-      padding: 12px 25px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      background: orange;
-      cursor: pointer;
+      background: #f5f5f5;
     }
 
     video {
       width: 100%;
-      max-width: 700px;
-      margin-top: 20px;
-      border-radius: 10px;
-      background: black;
+      max-width: 600px;
+      margin: 20px 0;
     }
 
     #subtitles {
-      margin-top: 20px;
-      font-size: 20px;
-      color: #00ff99;
-      min-height: 40px;
-      word-wrap: break-word;
+      width: 100%;
+      max-width: 600px;
+      height: 150px;
+      margin: 10px auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background: white;
+      text-align: left;
+      overflow-y: auto;
     }
 
+    textarea {
+      width: 100%;
+      max-width: 600px;
+      height: 150px;
+      margin-top: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🎤 AI Subtitle Generator (English Output)</h1>
+  <h2>AI Video Transcription System</h2>
 
   <input type="file" id="videoInput" accept="video/*">
-
-  <br>
-
-  <button id="processBtn">Generate Subtitles</button>
-
   <br>
 
   <video id="video" controls></video>
+  <br>
 
-  <div id="subtitles">Loading model...</div>
+  <button id="processBtn">Generate</button>
 
-  <!-- IMPORTANT -->
-  <script type="module" src="./app.js"></script>
+  <div id="subtitles">Loading AI model...</div>
+
+  <textarea id="editor" placeholder="Editable transcription will appear here..."></textarea>
+  <br>
+
+  <button id="copyBtn">Copy Text</button>
+  <button id="downloadBtn">Download TXT</button>
+
+  <script type="module" src="app.js"></script>
 
 </body>
 </html>
