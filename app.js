@@ -101,9 +101,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-
 // =========================
-// 🔹 SAFE AUDIO EXTRACT
+// 🔹 SAFE + RESAMPLED AUDIO
 // =========================
 async function extractAudioSafe(file) {
 
@@ -116,12 +115,34 @@ async function extractAudioSafe(file) {
 
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
-  // Direct mono extraction (no OfflineAudioContext)
-  const channelData = decoded.getChannelData(0);
+  const targetSampleRate = 16000;
 
-  return channelData;
+  const length = Math.floor(decoded.duration * targetSampleRate);
+
+  const offlineCtx = new OfflineAudioContext(
+    1,
+    length,
+    targetSampleRate
+  );
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = decoded;
+
+  // Force mono
+  const splitter = offlineCtx.createChannelSplitter(2);
+  const merger = offlineCtx.createChannelMerger(1);
+
+  source.connect(splitter);
+  splitter.connect(merger, 0, 0);
+
+  merger.connect(offlineCtx.destination);
+
+  source.start(0);
+
+  const rendered = await offlineCtx.startRendering();
+
+  return rendered.getChannelData(0);
 }
-
 
 // =========================
 // 🔹 REPEAT FILTER (Improved)
