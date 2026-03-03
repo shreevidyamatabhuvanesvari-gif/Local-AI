@@ -1,67 +1,71 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hindi Subtitle Generator</title>
+  <meta charset="UTF-8">
+  <title>AI Subtitle Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
-      background: #0d0d0d;
+      background-color: #111;
       color: white;
       font-family: Arial, sans-serif;
       text-align: center;
-      padding: 30px;
+      padding: 20px;
     }
 
     h1 {
-      font-size: 40px;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      margin: 15px 0;
     }
 
     button {
-      background: orange;
+      padding: 12px 25px;
+      font-size: 16px;
+      border-radius: 8px;
       border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 10px;
+      background: orange;
       cursor: pointer;
-      margin-top: 15px;
     }
 
     video {
       width: 100%;
       max-width: 700px;
-      margin-top: 25px;
+      margin-top: 20px;
       border-radius: 10px;
+      background: black;
     }
 
     #subtitles {
       margin-top: 20px;
-      font-size: 22px;
+      font-size: 20px;
       color: #00ff99;
       min-height: 40px;
+      word-wrap: break-word;
     }
 
   </style>
 </head>
-
 <body>
 
-  <h1>🎤 Hindi Subtitle Generator</h1>
+  <h1>🎤 AI Subtitle Generator (English Output)</h1>
 
-  <input type="file" id="videoInput" accept="video/*" />
+  <input type="file" id="videoInput" accept="video/*">
 
-  <br/>
+  <br>
 
   <button id="processBtn">Generate Subtitles</button>
 
-  <br/>
+  <br>
 
   <video id="video" controls></video>
 
-  <div id="subtitles">Model loading...</div>
+  <div id="subtitles">Loading model...</div>
 
+  <!-- IMPORTANT -->
   <script type="module" src="./app.js"></script>
 
 </body>
