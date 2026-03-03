@@ -7,89 +7,61 @@
 
   <style>
     body {
+      background: #0d0d0d;
+      color: white;
       font-family: Arial, sans-serif;
       text-align: center;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
+      padding: 30px;
     }
 
     h1 {
-      margin-bottom: 20px;
-    }
-
-    input[type="file"] {
-      margin: 10px;
+      font-size: 40px;
+      margin-bottom: 30px;
     }
 
     button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
+      background: orange;
       border: none;
-      background: #ff9800;
-      color: #000;
-      border-radius: 5px;
-    }
-
-    button:hover {
-      background: #ffc107;
-    }
-
-    .video-container {
-      position: relative;
-      display: inline-block;
-      margin-top: 20px;
-      max-width: 100%;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 15px;
     }
 
     video {
       width: 100%;
-      max-width: 800px;
-      border-radius: 8px;
+      max-width: 700px;
+      margin-top: 25px;
+      border-radius: 10px;
     }
 
     #subtitles {
-      position: absolute;
-      bottom: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      font-size: 26px;
-      font-weight: bold;
-      text-align: center;
-      color: yellow;
-      text-shadow: 2px 2px 6px black;
-      pointer-events: none;
+      margin-top: 20px;
+      font-size: 22px;
+      color: #00ff99;
+      min-height: 40px;
     }
 
-    .status {
-      margin-top: 15px;
-      font-size: 18px;
-      color: #00e676;
-    }
   </style>
 </head>
 
 <body>
 
-  <h1>🎙 Hindi Subtitle Generator</h1>
+  <h1>🎤 Hindi Subtitle Generator</h1>
 
   <input type="file" id="videoInput" accept="video/*" />
-  <br>
+
+  <br/>
+
   <button id="processBtn">Generate Subtitles</button>
 
-  <div class="video-container">
-    <video id="video" controls></video>
-    <div id="subtitles"></div>
-  </div>
+  <br/>
 
-  <div class="status">
-    Model will load automatically...
-  </div>
+  <video id="video" controls></video>
 
-  <!-- ✅ ONLY ONE SCRIPT -->
+  <div id="subtitles">Model loading...</div>
+
   <script type="module" src="./app.js"></script>
 
 </body>
