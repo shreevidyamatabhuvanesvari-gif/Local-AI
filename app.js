@@ -8,36 +8,41 @@ const videoElement = document.getElementById("video");
 const subtitlesDiv = document.getElementById("subtitles");
 const processBtn = document.getElementById("processBtn");
 
-// ------------------
-// Load Model (Better Hindi)
-// ------------------
+// -------------------------
+// 1️⃣ Load Whisper-small
+// -------------------------
 async function loadModel() {
+  subtitlesDiv.innerHTML = "Model Loading... ⏳ (First time slow होगा)";
+  
   transcriber = await pipeline(
     "automatic-speech-recognition",
-    "Xenova/whisper-base"
+    "Xenova/whisper-small"
   );
-  alert("Model Loaded ✅");
+
+  subtitlesDiv.innerHTML = "Model Loaded ✅";
 }
+
 loadModel();
 
-// ------------------
-// Video Upload
-// ------------------
+// -------------------------
+// 2️⃣ Video Upload Preview
+// -------------------------
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
   if (!file) return;
 
-  videoElement.src = URL.createObjectURL(file);
+  const url = URL.createObjectURL(file);
+  videoElement.src = url;
 });
 
-// ------------------
-// Generate Subtitles
-// ------------------
+// -------------------------
+// 3️⃣ Generate Subtitles
+// -------------------------
 processBtn.addEventListener("click", async () => {
   const file = videoInput.files[0];
   if (!file) return alert("Upload video first");
 
-  subtitlesDiv.innerHTML = "Processing... ⏳";
+  subtitlesDiv.innerHTML = "Processing Audio... ⏳";
 
   const audioData = await extractAudio(file);
 
@@ -50,23 +55,19 @@ processBtn.addEventListener("click", async () => {
   });
 
   if (!result.chunks) {
-    subtitlesDiv.innerHTML = "No speech detected.";
+    subtitlesDiv.innerHTML = "Speech not detected ❌";
     return;
   }
 
-  wordChunks = result.chunks.map(word => ({
-    text: convertUrduToHindi(word.text),
-    timestamp: word.timestamp
-  }));
+  wordChunks = normalizeHindi(result.chunks);
 
-  subtitlesDiv.innerHTML = "Play Video ▶";
-
+  subtitlesDiv.innerHTML = "Ready ▶ Play Video";
   startSubtitleEngine();
 });
 
-// ------------------
-// Extract Audio
-// ------------------
+// -------------------------
+// 4️⃣ Extract Audio
+// -------------------------
 async function extractAudio(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -74,47 +75,56 @@ async function extractAudio(file) {
   return decoded.getChannelData(0);
 }
 
-// ------------------
-// Subtitle Engine
-// ------------------
-function startSubtitleEngine() {
+// -------------------------
+// 5️⃣ Urdu → Hindi Normalize
+// -------------------------
+function normalizeHindi(chunks) {
+  const urduToHindiMap = {
+    "ہے": "है",
+    "میں": "में",
+    "اور": "और",
+    "کی": "की",
+    "کا": "का",
+    "کو": "को",
+    "یہ": "यह",
+    "وہ": "वह"
+  };
 
-  videoElement.ontimeupdate = () => {
-    const currentTime = videoElement.currentTime;
+  return chunks.map(word => {
+    let text = word.text.trim();
 
-    let html = "";
-
-    wordChunks.forEach(word => {
-      if (currentTime >= word.timestamp[0] &&
-          currentTime <= word.timestamp[1]) {
-
-        html += `<span style="color:yellow;font-size:32px;">
-                  ${word.text}
-                </span> `;
-      } else {
-        html += `<span style="opacity:0.6;">
-                  ${word.text}
-                </span> `;
+    Object.keys(urduToHindiMap).forEach(urdu => {
+      if (text.includes(urdu)) {
+        text = text.replaceAll(urdu, urduToHindiMap[urdu]);
       }
     });
 
-    subtitlesDiv.innerHTML = html;
-  };
+    return {
+      ...word,
+      text
+    };
+  });
 }
 
-// ------------------
-// Urdu → Hindi Script Convert
-// ------------------
-function convertUrduToHindi(text) {
-  const map = {
-    "ا":"अ","ب":"ब","پ":"प","ت":"त","ٹ":"ट",
-    "ث":"स","ج":"ज","چ":"च","ح":"ह","خ":"ख",
-    "د":"द","ڈ":"ड","ر":"र","ز":"ज","س":"स",
-    "ش":"श","ص":"स","ض":"द","ط":"त","ظ":"ज",
-    "ع":"अ","غ":"ग","ف":"फ","ق":"क","ک":"क",
-    "گ":"ग","ل":"ल","م":"म","ن":"न","و":"व",
-    "ہ":"ह","ی":"ि"
-  };
+// -------------------------
+// 6️⃣ Subtitle Sync Engine
+// -------------------------
+function startSubtitleEngine() {
+  videoElement.addEventListener("timeupdate", () => {
+    const currentTime = videoElement.currentTime;
 
-  return text.split("").map(c => map[c] || c).join("");
-}
+    let activeText = "";
+
+    wordChunks.forEach(word => {
+      const [start, end] = word.timestamp;
+
+      if (currentTime >= start && currentTime <= end) {
+        activeText += `<span style="color:yellow;">${word.text}</span> `;
+      } else {
+        activeText += `<span style="opacity:0.6;">${word.text}</span> `;
+      }
+    });
+
+    subtitlesDiv.innerHTML = activeText;
+  });
+    }
