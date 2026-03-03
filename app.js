@@ -18,10 +18,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
 
     transcriber = await pipeline(
-      "automatic-speech-recognition",
-      "Xenova/whisper-tiny",
-      { quantized: true }
-    );
+  "automatic-speech-recognition",
+  "Xenova/whisper-small",
+  { quantized: true }
+);
 
     subtitlesDiv.textContent = "Model Loaded ✔";
 
@@ -76,11 +76,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       subtitlesDiv.textContent = "Transcribing... ⏳";
 
       const result = await transcriber(audio, {
-        generate_kwargs: {
-          language: "hi",
-          task: "transcribe"
-        }
-      });
+  return_timestamps: false,
+  generate_kwargs: {
+    language: "hi",
+    task: "transcribe",
+    temperature: 0.0
+  }
+});
 
       subtitlesDiv.textContent = result.text || "No speech detected";
 
