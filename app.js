@@ -1,5 +1,6 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
 import { correctHindiText } from "./hindiSpellCorrector.js";
+import { processHindiText } from "./hindiNLP.js";
 
 let transcriber = null;
 let wordChunks = [];
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // -------------------------
-  // 1️⃣ Load Model
+  // 1️⃣ Load Whisper Model
   // -------------------------
   async function loadModel() {
     try {
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       subtitlesDiv.textContent = "Model Loaded ✅";
+
     } catch (err) {
       subtitlesDiv.textContent = "Model Load Failed ❌";
       console.error("MODEL ERROR:", err);
@@ -46,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
   videoInput.addEventListener("change", () => {
     const file = videoInput.files?.[0];
     if (!file) return;
-
     videoElement.src = URL.createObjectURL(file);
   });
 
@@ -88,9 +89,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // -------- Full Text Fallback --------
       if (!result.chunks && result.text) {
-        subtitlesDiv.textContent =
-          correctHindiText(result.text);
+
+        let cleaned =
+          processHindiText(
+            correctHindiText(result.text)
+          );
+
+        subtitlesDiv.textContent = cleaned;
         return;
       }
 
@@ -99,12 +106,21 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      // -------- Word-Level Processing --------
       wordChunks = result.chunks
         .filter(w => w.timestamp && w.timestamp.length === 2)
-        .map(word => ({
-          ...word,
-          text: correctHindiText(word.text?.trim() || "")
-        }));
+        .map(word => {
+
+          let cleaned =
+            processHindiText(
+              correctHindiText(word.text?.trim() || "")
+            );
+
+          return {
+            ...word,
+            text: cleaned
+          };
+        });
 
       subtitlesDiv.textContent = "Ready ▶ Play Video";
 
@@ -122,8 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+
 // -------------------------
-// 4️⃣ Proper Resampling (Safe)
+// 4️⃣ Safe Audio Resampling
 // -------------------------
 async function extractAudioProper(file) {
 
@@ -159,8 +176,9 @@ async function extractAudioProper(file) {
   return rendered.getChannelData(0);
 }
 
+
 // -------------------------
-// 5️⃣ Subtitle Sync Engine (Safe)
+// 5️⃣ Subtitle Sync Engine
 // -------------------------
 function startSubtitleEngine(videoElement, subtitlesDiv) {
 
