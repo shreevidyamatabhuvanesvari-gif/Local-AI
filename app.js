@@ -1,9 +1,7 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
-import { correctHindiText } from "./hindiSpellCorrector.js";
-import { processHindiText } from "./hindiNLP.js";
 
 let transcriber = null;
-let wordChunks = [];
+let sentenceChunks = [];
 let subtitleEngineStarted = false;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -13,51 +11,50 @@ document.addEventListener("DOMContentLoaded", () => {
   const subtitlesDiv = document.getElementById("subtitles");
   const processBtn = document.getElementById("processBtn");
 
-  // 🛑 DOM Safety Check
   if (!videoInput || !videoElement || !subtitlesDiv || !processBtn) {
     console.error("DOM Elements Missing");
     return;
   }
 
-  // -------------------------
-  // 1️⃣ Load Whisper Model
-  // -------------------------
+  // =========================
+  // 1️⃣ Load Whisper Medium
+  // =========================
   async function loadModel() {
     try {
-      subtitlesDiv.textContent = "Model Loading... ⏳";
+      subtitlesDiv.textContent = "Loading Medium Model... ⏳ (First time may take 1-2 min)";
 
       transcriber = await pipeline(
         "automatic-speech-recognition",
-        "Xenova/whisper-small",
+        "Xenova/whisper-medium",
         { quantized: true }
       );
 
-      subtitlesDiv.textContent = "Model Loaded ✅";
+      subtitlesDiv.textContent = "Model Ready ✅";
 
     } catch (err) {
       subtitlesDiv.textContent = "Model Load Failed ❌";
-      console.error("MODEL ERROR:", err);
+      console.error(err);
     }
   }
 
   loadModel();
 
-  // -------------------------
+  // =========================
   // 2️⃣ Video Preview
-  // -------------------------
+  // =========================
   videoInput.addEventListener("change", () => {
     const file = videoInput.files?.[0];
     if (!file) return;
     videoElement.src = URL.createObjectURL(file);
   });
 
-  // -------------------------
+  // =========================
   // 3️⃣ Generate Subtitles
-  // -------------------------
+  // =========================
   processBtn.addEventListener("click", async () => {
 
     if (!transcriber) {
-      alert("Model not loaded yet");
+      alert("Model still loading...");
       return;
     }
 
@@ -70,57 +67,32 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       subtitlesDiv.textContent = "Extracting Audio... ⏳";
 
-      const audioData = await extractAudioProper(file);
+      const audioData = await extractAudio(file);
 
-      subtitlesDiv.textContent = "Transcribing... ⏳";
+      subtitlesDiv.textContent = "Transcribing (High Accuracy Mode)... ⏳";
 
       const result = await transcriber(audioData, {
-        return_timestamps: "word",
+        return_timestamps: true,   // ✅ sentence-level
+        chunk_length_s: 20,        // stable chunking
         generate_kwargs: {
           language: "hi",
           task: "transcribe"
         }
       });
 
-      console.log("RESULT:", result);
-
-      if (!result) {
-        subtitlesDiv.textContent = "No result ❌";
+      if (!result || !result.chunks) {
+        subtitlesDiv.textContent = "No speech detected ❌";
         return;
       }
 
-      // -------- Full Text Fallback --------
-      if (!result.chunks && result.text) {
-
-        let cleaned =
-          processHindiText(
-            correctHindiText(result.text)
-          );
-
-        subtitlesDiv.textContent = cleaned;
-        return;
-      }
-
-      if (!result.chunks) {
-        subtitlesDiv.textContent = "Speech not detected ❌";
-        return;
-      }
-
-      // -------- Word-Level Processing --------
-      wordChunks = result.chunks
-        .filter(w => w.timestamp && w.timestamp.length === 2)
-        .map(word => {
-
-          let cleaned =
-            processHindiText(
-              correctHindiText(word.text?.trim() || "")
-            );
-
-          return {
-            ...word,
-            text: cleaned
-          };
-        });
+      // Store sentence chunks
+      sentenceChunks = result.chunks
+        .filter(c => c.timestamp && c.timestamp.length === 2)
+        .map(chunk => ({
+          start: chunk.timestamp[0],
+          end: chunk.timestamp[1],
+          text: cleanText(chunk.text)
+        }));
 
       subtitlesDiv.textContent = "Ready ▶ Play Video";
 
@@ -131,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       subtitlesDiv.textContent = "Processing Failed ❌";
-      console.error("PROCESS ERROR:", err);
+      console.error(err);
     }
 
   });
@@ -139,26 +111,18 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// -------------------------
-// 4️⃣ Safe Audio Resampling
-// -------------------------
-async function extractAudioProper(file) {
+// =========================
+// 🎧 Stable Audio Extraction
+// =========================
+async function extractAudio(file) {
 
   const arrayBuffer = await file.arrayBuffer();
-
-  const AudioContextClass =
-    window.AudioContext || window.webkitAudioContext;
-
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const audioCtx = new AudioContextClass();
-
   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
 
   const targetSampleRate = 16000;
-
-  const length = Math.max(
-    1,
-    Math.floor(decoded.duration * targetSampleRate)
-  );
+  const length = Math.floor(decoded.duration * targetSampleRate);
 
   const offlineCtx = new OfflineAudioContext(
     1,
@@ -172,36 +136,37 @@ async function extractAudioProper(file) {
   source.start(0);
 
   const rendered = await offlineCtx.startRendering();
-
   return rendered.getChannelData(0);
 }
 
 
-// -------------------------
-// 5️⃣ Subtitle Sync Engine
-// -------------------------
+// =========================
+// 🧹 Safe Minimal Cleanup
+// =========================
+function cleanText(text) {
+  return text
+    .normalize("NFC")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+// =========================
+// 🎬 Sentence Subtitle Engine
+// =========================
 function startSubtitleEngine(videoElement, subtitlesDiv) {
 
   videoElement.addEventListener("timeupdate", () => {
 
-    if (!wordChunks.length) return;
+    if (!sentenceChunks.length) return;
 
     const currentTime = videoElement.currentTime;
-    let activeText = "";
 
-    for (let word of wordChunks) {
+    const activeChunk = sentenceChunks.find(chunk =>
+      currentTime >= chunk.start && currentTime <= chunk.end
+    );
 
-      if (!word.timestamp) continue;
-
-      const start = word.timestamp[0];
-      const end = word.timestamp[1];
-
-      if (currentTime >= start && currentTime <= end) {
-        activeText += word.text + " ";
-      }
-    }
-
-    subtitlesDiv.textContent = activeText.trim();
+    subtitlesDiv.textContent = activeChunk ? activeChunk.text : "";
 
   });
 
