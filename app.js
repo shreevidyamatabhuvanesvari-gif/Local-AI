@@ -1,133 +1,106 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
 
-let transcriber = null;
+let transcriber;
+let words = [];
 
-document.addEventListener("DOMContentLoaded", async () => {
+const video = document.getElementById("video");
+const videoInput = document.getElementById("videoInput");
+const subtitleBox = document.getElementById("subtitleBox");
+const editor = document.getElementById("editor");
+const generateBtn = document.getElementById("generateBtn");
 
-  const subtitlesDiv = document.getElementById("subtitles");
-  const videoInput = document.getElementById("videoInput");
-  const processBtn = document.getElementById("processBtn");
-  const videoElement = document.getElementById("video");
-  const editor = document.getElementById("editor");
-  const copyBtn = document.getElementById("copyBtn");
-  const downloadBtn = document.getElementById("downloadBtn");
+init();
 
-  subtitlesDiv.textContent = "Loading AI model...";
+async function init(){
 
-  try {
-    transcriber = await pipeline(
-      "automatic-speech-recognition",
-      "Xenova/whisper-small",
-      { quantized: true }
-    );
+subtitleBox.innerText="Loading AI...";
 
-    subtitlesDiv.textContent = "Model Loaded ✔";
-  } catch (err) {
-    subtitlesDiv.textContent = "Model Load Failed ❌";
-    console.error(err);
-  }
+transcriber = await pipeline(
+"automatic-speech-recognition",
+"Xenova/whisper-small",
+{ quantized:true }
+);
 
-  // Video Preview
-  videoInput.addEventListener("change", () => {
-    const file = videoInput.files[0];
-    if (!file) return;
+subtitleBox.innerText="AI Ready";
 
-    videoElement.src = URL.createObjectURL(file);
-    videoElement.load();
-  });
+}
 
-  // Generate
-  processBtn.addEventListener("click", async () => {
+videoInput.onchange = ()=>{
+const file = videoInput.files[0];
+video.src = URL.createObjectURL(file);
+};
 
-    if (!transcriber) {
-      alert("Model not ready yet");
-      return;
-    }
+generateBtn.onclick = async ()=>{
 
-    const file = videoInput.files[0];
-    if (!file) {
-      alert("Upload video first");
-      return;
-    }
+const file = videoInput.files[0];
 
-    try {
-      subtitlesDiv.textContent = "Extracting audio...";
-      const audio = await extractAudio(file);
+if(!file){
+alert("Upload video first");
+return;
+}
 
-      subtitlesDiv.textContent = "Transcribing...";
-      const result = await transcriber(audio, {
-        generate_kwargs: {
-          temperature: 0.0
-        }
-      });
+subtitleBox.innerText="Extracting audio...";
 
-      let cleanText = cleanRepetition(result.text || "");
+const audio = await extractAudio(file);
 
-      subtitlesDiv.textContent = "Done ✔";
-      editor.value = cleanText;
+subtitleBox.innerText="AI Listening...";
 
-    } catch (err) {
-      subtitlesDiv.textContent = "Transcription failed ❌";
-      console.error(err);
-    }
-  });
+const result = await transcriber(audio,{
+return_timestamps:"word"
+});
 
-  // Copy
-  copyBtn.addEventListener("click", () => {
-    editor.select();
-    document.execCommand("copy");
-    alert("Copied!");
-  });
+words = result.chunks;
 
-  // Download
-  downloadBtn.addEventListener("click", () => {
-    const blob = new Blob([editor.value], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "transcription.txt";
-    link.click();
-  });
+editor.value = result.text;
+
+subtitleBox.innerText="Subtitles Ready";
+
+};
+
+video.addEventListener("timeupdate", ()=>{
+
+const time = video.currentTime;
+
+for(let w of words){
+
+if(time>=w.timestamp[0] && time<=w.timestamp[1]){
+
+subtitleBox.innerText = w.text;
+
+break;
+
+}
+
+}
 
 });
 
-// Audio Extract
-async function extractAudio(file) {
+async function extractAudio(file){
 
-  const arrayBuffer = await file.arrayBuffer();
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  const audioCtx = new AudioContextClass();
-  const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+const buffer = await file.arrayBuffer();
 
-  const targetSampleRate = 16000;
+const ctx = new AudioContext();
 
-  const offlineCtx = new OfflineAudioContext(
-    1,
-    Math.ceil(decoded.duration * targetSampleRate),
-    targetSampleRate
-  );
+const decoded = await ctx.decodeAudioData(buffer);
 
-  const source = offlineCtx.createBufferSource();
-  source.buffer = decoded;
-  source.connect(offlineCtx.destination);
-  source.start(0);
+const targetRate = 16000;
 
-  const rendered = await offlineCtx.startRendering();
+const offline = new OfflineAudioContext(
+1,
+decoded.duration * targetRate,
+targetRate
+);
 
-  return rendered.getChannelData(0);
-}
+const src = offline.createBufferSource();
 
-// Remove repeated words
-function cleanRepetition(text) {
-  const words = text.split(" ");
-  const filtered = [];
-  let lastWord = "";
+src.buffer = decoded;
 
-  for (let word of words) {
-    if (word !== lastWord) {
-      filtered.push(word);
-    }
-    lastWord = word;
-  }
+src.connect(offline.destination);
 
-  return filtered.join(" ");
+src.start();
+
+const rendered = await offline.startRendering();
+
+return rendered.getChannelData(0);
+
 }
