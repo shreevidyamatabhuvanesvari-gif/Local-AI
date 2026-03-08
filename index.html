@@ -1,70 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>AI Subtitle System</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background: #f5f5f5;
-    }
+<meta charset="UTF-8">
+<title>AI Subtitle Generator</title>
 
-    video {
-      width: 100%;
-      max-width: 600px;
-      margin: 20px 0;
-    }
+<style>
 
-    #subtitles {
-      width: 100%;
-      max-width: 600px;
-      height: 150px;
-      margin: 10px auto;
-      padding: 10px;
-      border: 1px solid #ccc;
-      background: white;
-      text-align: left;
-      overflow-y: auto;
-    }
+body{
+font-family: Arial;
+text-align:center;
+padding:20px;
+background:#f4f4f4;
+}
 
-    textarea {
-      width: 100%;
-      max-width: 600px;
-      height: 150px;
-      margin-top: 10px;
-    }
+.videoBox{
+position:relative;
+display:inline-block;
+}
 
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-    }
-  </style>
+video{
+width:600px;
+max-width:95%;
+}
+
+.subtitle{
+position:absolute;
+bottom:25px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,0.7);
+color:white;
+padding:8px 14px;
+font-size:20px;
+border-radius:6px;
+max-width:90%;
+}
+
+textarea{
+width:600px;
+max-width:95%;
+height:150px;
+margin-top:15px;
+}
+
+button{
+padding:10px 20px;
+margin-top:10px;
+}
+
+</style>
+
 </head>
+
 <body>
 
-  <h2>AI Video Transcription System</h2>
+<h2>AI Video Subtitle Generator</h2>
 
-  <input type="file" id="videoInput" accept="video/*">
-  <br>
+<input type="file" id="videoInput" accept="video/*"><br><br>
 
-  <video id="video" controls></video>
-  <br>
+<div class="videoBox">
 
-  <button id="processBtn">Generate</button>
+<video id="video" controls></video>
 
-  <div id="subtitles">Loading AI model...</div>
+<div id="subtitleBox" class="subtitle"></div>
 
-  <textarea id="editor" placeholder="Editable transcription will appear here..."></textarea>
-  <br>
+</div>
 
-  <button id="copyBtn">Copy Text</button>
-  <button id="downloadBtn">Download TXT</button>
+<br>
 
-  <script type="module" src="app.js"></script>
+<button id="generateBtn">Generate Subtitles</button>
+
+<br>
+
+<textarea id="editor"></textarea>
+
+<script type="module" src="app.js"></script>
 
 </body>
 </html>
