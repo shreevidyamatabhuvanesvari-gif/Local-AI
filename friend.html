@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Friend AI</title>
+<style>
+
+body{
+background:#111;
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+#chat{
+margin-top:40px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Friend AI Chat</h2>
+
+<div id="chat">
+<input id="msg" placeholder="Talk to your AI friend">
+<button onclick="send()">Send</button>
+</div>
+
+<script>
+
+async function send(){
+
+let text=document.getElementById("msg").value;
+
+let res=await fetch("http://localhost:3000/ai?text="+text);
+
+let data=await res.text();
+
+alert("Friend: "+data);
+
+}
+
+</script>
+
+</body>
+</html>
