@@ -1,74 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Local AI Coding Assistant</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Speech AI</title>
+
 <style>
+
 body{
-font-family: Arial;
+font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
 }
 
-#chat{
+video{
 width:90%;
 max-width:500px;
-margin:auto;
-margin-top:40px;
+margin-top:20px;
 }
 
-#messages{
-height:300px;
-overflow:auto;
-border:1px solid #444;
-padding:10px;
-margin-bottom:10px;
-}
-
-input{
-width:70%;
-padding:10px;
+#subtitles{
+margin-top:15px;
+font-size:18px;
+color:#00ffcc;
 }
 
 button{
-padding:10px;
+margin:10px;
+padding:10px 20px;
+font-size:16px;
 }
+
 </style>
+
 </head>
 
 <body>
 
-<h2>Local AI Coding Assistant</h2>
+<h2>Video Speech AI</h2>
 
-<div id="chat">
+<input type="file" id="videoInput">
 
-<div id="messages"></div>
+<br>
 
-<input id="userInput" placeholder="Ask coding question...">
-<button onclick="send()">Send</button>
+<video id="video" controls></video>
 
-</div>
+<br>
 
-<script>
+<button id="generateBtn">Generate Subtitles</button>
 
-async function send(){
+<button onclick="window.location.href='friend.html'">
+Friend Chat
+</button>
 
-let input=document.getElementById("userInput").value;
+<div id="subtitles">Subtitles will appear here...</div>
 
-let box=document.getElementById("messages");
-
-box.innerHTML+="<p><b>You:</b> "+input+"</p>";
-
-let res=await fetch("http://localhost:3000/ai?text="+input);
-
-let data=await res.text();
-
-box.innerHTML+="<p><b>AI:</b> "+data+"</p>";
-
-}
-
-</script>
+<script type="module" src="app.js"></script>
 
 </body>
 </html>
