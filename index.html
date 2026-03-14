@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Local AI Coding Assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+font-family: Arial;
+background:#111;
+color:white;
+text-align:center;
+}
+
+#chat{
+width:90%;
+max-width:500px;
+margin:auto;
+margin-top:40px;
+}
+
+#messages{
+height:300px;
+overflow:auto;
+border:1px solid #444;
+padding:10px;
+margin-bottom:10px;
+}
+
+input{
+width:70%;
+padding:10px;
+}
+
+button{
+padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Local AI Coding Assistant</h2>
+
+<div id="chat">
+
+<div id="messages"></div>
+
+<input id="userInput" placeholder="Ask coding question...">
+<button onclick="send()">Send</button>
+
+</div>
+
+<script>
+
+async function send(){
+
+let input=document.getElementById("userInput").value;
+
+let box=document.getElementById("messages");
+
+box.innerHTML+="<p><b>You:</b> "+input+"</p>";
+
+let res=await fetch("http://localhost:3000/ai?text="+input);
+
+let data=await res.text();
+
+box.innerHTML+="<p><b>AI:</b> "+data+"</p>";
+
+}
+
+</script>
+
+</body>
+</html>
