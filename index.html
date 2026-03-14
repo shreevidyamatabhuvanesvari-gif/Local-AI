@@ -4,8 +4,7 @@
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Video Speech AI</title>
+<title>Video Subtitle AI</title>
 
 <style>
 
@@ -16,24 +15,34 @@ font-family:Arial;
 text-align:center;
 }
 
-video{
+#videoContainer{
+position:relative;
 width:95%;
 max-width:500px;
-margin-top:20px;
+margin:auto;
+}
+
+video{
+width:100%;
 border-radius:10px;
 }
 
-button{
-padding:12px;
-margin:10px;
-font-size:16px;
+#subtitles{
+position:absolute;
+bottom:15px;
+left:0;
+right:0;
+text-align:center;
+font-size:20px;
+color:#00ffcc;
+background:rgba(0,0,0,0.6);
+padding:6px;
 }
 
-#subtitles{
-margin-top:15px;
-font-size:18px;
-color:#00ffcc;
-padding:10px;
+button{
+margin:10px;
+padding:10px 20px;
+font-size:16px;
 }
 
 </style>
@@ -42,19 +51,25 @@ padding:10px;
 
 <body>
 
-<h2>Video Speech AI</h2>
+<h2>Video Subtitle AI</h2>
 
-<!-- Video from Gallery -->
 <input 
 type="file"
 id="videoInput"
 accept="video/*"
-capture="environment"
 >
 
-<br>
+<br><br>
+
+<div id="videoContainer">
 
 <video id="video" controls></video>
+
+<div id="subtitles">
+Subtitles will appear here
+</div>
+
+</div>
 
 <br>
 
@@ -65,12 +80,6 @@ Generate Subtitles
 <button onclick="openFriend()">
 Friend Chat
 </button>
-
-<div id="subtitles">
-Subtitles will appear here
-</div>
-
-<script src="app.js" type="module"></script>
 
 <script>
 
@@ -84,7 +93,6 @@ const file=this.files[0];
 if(file){
 
 video.src=URL.createObjectURL(file);
-
 video.load();
 
 }
@@ -98,6 +106,8 @@ window.location.href="friend.html";
 }
 
 </script>
+
+<script type="module" src="app.js"></script>
 
 </body>
 
