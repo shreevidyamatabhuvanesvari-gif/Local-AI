@@ -4,6 +4,7 @@
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>Video Subtitle AI</title>
 
 <style>
@@ -53,11 +54,7 @@ font-size:16px;
 
 <h2>Video Subtitle AI</h2>
 
-<input 
-type="file"
-id="videoInput"
-accept="video/*"
->
+<input type="file" id="videoInput" accept="video/*">
 
 <br><br>
 
@@ -81,23 +78,9 @@ Generate Subtitles
 Friend Chat
 </button>
 
+<script src="app.js"></script>
+
 <script>
-
-const videoInput=document.getElementById("videoInput");
-const video=document.getElementById("video");
-
-videoInput.addEventListener("change",function(){
-
-const file=this.files[0];
-
-if(file){
-
-video.src=URL.createObjectURL(file);
-video.load();
-
-}
-
-});
 
 function openFriend(){
 
@@ -106,8 +89,6 @@ window.location.href="friend.html";
 }
 
 </script>
-
-<script type="module" src="app.js"></script>
 
 </body>
 
