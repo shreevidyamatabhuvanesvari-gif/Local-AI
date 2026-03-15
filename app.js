@@ -1,62 +1,57 @@
-import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.0";
+const videoInput = document.getElementById("videoInput");
+const video = document.getElementById("video");
+const subtitles = document.getElementById("subtitles");
+const btn = document.getElementById("generateBtn");
 
-let transcriber=null;
+videoInput.addEventListener("change", function(){
 
-const videoInput=document.getElementById("videoInput");
-const video=document.getElementById("video");
-const subtitles=document.getElementById("subtitles");
-const generateBtn=document.getElementById("generateBtn");
-
-subtitles.textContent="Loading speech AI...";
-
-transcriber = await pipeline(
-"automatic-speech-recognition",
-"Xenova/whisper-small"
-);
-
-subtitles.textContent="AI ready";
-
-videoInput.addEventListener("change",()=>{
-
-const file=videoInput.files[0];
+const file = this.files[0];
 
 if(file){
 
-video.src=URL.createObjectURL(file);
+video.src = URL.createObjectURL(file);
+video.load();
 
 }
 
 });
 
-generateBtn.onclick=async()=>{
+btn.onclick = async function(){
 
-const file=videoInput.files[0];
+const file = videoInput.files[0];
 
 if(!file){
-alert("Upload video first");
+
+alert("Please upload video first");
 return;
+
 }
 
-subtitles.textContent="Extracting audio...";
+subtitles.innerText = "Processing audio...";
 
-const audio = await extractAudio(file);
+const formData = new FormData();
 
-subtitles.textContent="Transcribing...";
+formData.append("video", file);
 
-const result = await transcriber(audio);
+try{
 
-subtitles.textContent=result.text;
+const res = await fetch("YOUR_NGROK_URL/transcribe",{
+
+method:"POST",
+body:formData
+
+});
+
+const text = await res.text();
+
+subtitles.innerText = text;
+
+}
+
+catch(err){
+
+subtitles.innerText = "Error connecting to server";
+
+}
 
 };
-
-async function extractAudio(file){
-
-const buffer=await file.arrayBuffer();
-
-const ctx=new AudioContext();
-
-const decoded=await ctx.decodeAudioData(buffer);
-
-return decoded.getChannelData(0);
-
-}
