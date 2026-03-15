@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
 <title>Friend AI</title>
+
 <style>
 
 body{
@@ -11,37 +14,53 @@ font-family:Arial;
 text-align:center;
 }
 
-#chat{
+#chatBox{
 margin-top:40px;
 }
 
+input{
+padding:10px;
+width:70%;
+}
+
+button{
+padding:10px;
+}
+
 </style>
+
 </head>
 
 <body>
 
 <h2>Friend AI Chat</h2>
 
-<div id="chat">
+<div id="chatBox">
+
 <input id="msg" placeholder="Talk to your AI friend">
+
 <button onclick="send()">Send</button>
+
 </div>
+
+<p id="reply"></p>
 
 <script>
 
 async function send(){
 
-let text=document.getElementById("msg").value;
+const text = document.getElementById("msg").value;
 
-let res=await fetch("http://localhost:3000/ai?text="+text);
+const res = await fetch("YOUR_NGROK_URL/ai?text="+text);
 
-let data=await res.text();
+const data = await res.text();
 
-alert("Friend: "+data);
+document.getElementById("reply").innerText = data;
 
 }
 
 </script>
 
 </body>
+
 </html>
